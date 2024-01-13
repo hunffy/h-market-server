@@ -20,6 +20,9 @@ const upload = multer({
 app.use(express.json());
 app.use(cors());
 
+//파일을 실제로 업로드할때 경로를 설정해주는 부분
+app.use("/uploads/", express.static("uploads"));
+
 //이미지 업로드 api
 //single('키값') : 하나의 이미지 업로드처리 이미지 키값을 넣어줘야한다. 여기서는 'image'가 키값
 app.post("/image", upload.single("image"), (req, res) => {
@@ -47,22 +50,23 @@ app.get("/products", (req, res) => {
     })
     .catch((error) => {
       console.log("error :", error);
-      res.send("에러발생");
+      res.status(400).send("에러발생");
     });
 });
 
 //상품 생성 Api
 app.post("/products", (req, res) => {
   const body = req.body;
-  const { name, description, price, seller } = body;
-  if (!name || !description || !price || !seller) {
-    res.send("모든 필드를 입력해 주세요");
+  const { name, description, price, seller, imageUrl } = body;
+  if (!name || !description || !price || !seller || !imageUrl) {
+    res.status(400).send("모든 필드를 입력해 주세요");
   }
   models.Product.create({
     name: name,
     description: description,
     price: price,
     seller: seller,
+    imageUrl: imageUrl,
   })
     .then((result) => {
       console.log("상품생성 결과 : ", result);
@@ -70,7 +74,7 @@ app.post("/products", (req, res) => {
     })
     .catch((error) => {
       console.log("error :", error);
-      res.send("상품 업로드에 문제가 발생했습니다.");
+      res.status(400).send("상품 업로드에 문제가 발생했습니다.");
     });
 });
 
@@ -105,6 +109,27 @@ app.get("/products/:id", (req, res) => {
     })
     .catch((error) => {
       console.log("error : ", error);
-      res.send("상품 조회에 에러가 발생했습니다.");
+      res.status(400).send("상품 조회에 에러가 발생했습니다.");
+    });
+});
+
+//삭제 api
+app.delete("/products/:id", (req, res) => {
+  const params = req.params;
+  const { id } = params;
+  models.Product.destroy({
+    where: {
+      id: id,
+    },
+  })
+    .then((result) => {
+      console.log("삭제성공", result);
+      res.send({
+        message: `ID : ${id}의 게시물이 삭제되었습니다.`,
+      });
+    })
+    .catch((error) => {
+      console.log("에러발생 : ", error);
+      res.status(400).send("삭제 중 에러가 발생했습니다.");
     });
 });
