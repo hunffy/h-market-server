@@ -40,7 +40,15 @@ app.get("/products", (req, res) => {
     //order : 정렬순서
     //attribute : 필요한 컬럼만 가져오게해준다.
     order: [["createdAt", "DESC"]],
-    attributes: ["id", "name", "price", "createdAt", "seller", "imageUrl"],
+    attributes: [
+      "id",
+      "name",
+      "price",
+      "createdAt",
+      "seller",
+      "imageUrl",
+      "soldout",
+    ],
   })
     .then((result) => {
       console.log("PRODUCT 조회 : ", result);
@@ -131,5 +139,48 @@ app.delete("/products/:id", (req, res) => {
     .catch((error) => {
       console.log("에러발생 : ", error);
       res.status(400).send("삭제 중 에러가 발생했습니다.");
+    });
+});
+
+//배너 api
+
+app.get("/banners", (req, res) => {
+  models.Banner.findAll({
+    limit: 2,
+  })
+    .then((result) => {
+      res.send({
+        banners: result,
+      });
+    })
+    .catch((error) => {
+      console.log("error :", error);
+      res.status(500).send("에러가 발생했습니다.");
+    });
+});
+
+// 결제하기 api
+
+app.post("/purchase/:id", (req, res) => {
+  const params = req.params;
+  const { id } = params;
+  models.Product.update(
+    {
+      soldout: 1,
+    },
+    {
+      where: {
+        id: id,
+      },
+    }
+  )
+    .then((result) => {
+      res.send({
+        result: true,
+      });
+    })
+    .catch((error) => {
+      console.log("error : ", error);
+      res.status(500).send("에러가 발생했습니다.");
     });
 });
