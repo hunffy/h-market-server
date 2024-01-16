@@ -2,7 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const app = express();
 const models = require("./models");
-const port = 8080;
+const port = process.env.PORT || 8080;
 const multer = require("multer");
 
 //이미지 파일을 저장할 장소
