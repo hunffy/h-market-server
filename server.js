@@ -5,6 +5,8 @@ const models = require("./models");
 const port = process.env.PORT || 8080;
 const multer = require("multer");
 
+const detectProduct = require("./helpers/detectProduct");
+
 //이미지 파일을 저장할 장소
 const upload = multer({
   storage: multer.diskStorage({
@@ -69,35 +71,24 @@ app.post("/products", (req, res) => {
   if (!name || !description || !price || !seller || !imageUrl) {
     res.status(400).send("모든 필드를 입력해 주세요");
   }
-  models.Product.create({
-    name: name,
-    description: description,
-    price: price,
-    seller: seller,
-    imageUrl: imageUrl,
-  })
-    .then((result) => {
-      console.log("상품생성 결과 : ", result);
-      res.send({ result: result });
+  detectProduct(imageUrl, (type) => {
+    models.Product.create({
+      name: name,
+      description: description,
+      price: price,
+      seller: seller,
+      imageUrl: imageUrl,
+      type: type,
     })
-    .catch((error) => {
-      console.log("error :", error);
-      res.status(400).send("상품 업로드에 문제가 발생했습니다.");
-    });
-});
-
-app.listen(port, () => {
-  console.log("서버가 구동중입니다.");
-  models.sequelize
-    .sync()
-    .then(() => {
-      console.log("DB연결 성공");
-    })
-    .catch((err) => {
-      console.log("error :", err);
-      console.log("DB연결 에러");
-      process.exit();
-    });
+      .then((result) => {
+        console.log("상품생성 결과 : ", result);
+        res.send({ result: result });
+      })
+      .catch((error) => {
+        console.log("error :", error);
+        res.status(400).send("상품 업로드에 문제가 발생했습니다.");
+      });
+  });
 });
 
 //상품상세 조회 api
@@ -182,5 +173,60 @@ app.post("/purchase/:id", (req, res) => {
     .catch((error) => {
       console.log("error : ", error);
       res.status(500).send("에러가 발생했습니다.");
+    });
+});
+
+//상품 추천 api (feat: tensoflow)
+app.get("/products/:id/recommendation", (req, res) => {
+  const { id } = req.params;
+  console.log("id", id); //findOne으로 req을 통해 받아온 param값 id에 맞는 상품을조회한다.
+  models.Product.findOne({
+    where: {
+      id,
+    },
+  })
+    .then((product) => {
+      if (!product) {
+        //상품을 찾지 못한경우
+        console.log("상품을 찾을 수 없습니다.");
+        res.status(400).send("상품을 찾을수 없습니다.");
+        return;
+      }
+      //id와 일치하는 상품에서 type값을 뽑아서,
+      const type = product.type;
+      //type값과 일치하는 상품들을 모두찾는다.
+      models.Product.findAll({
+        where: {
+          type,
+          id: {
+            //기준이되는 id와 일치하지않는 데이터만찾겠다.
+            //예를들어 id가4번일때 4번을제외한 4번과 같은type의 상품만 보여줘야하는데
+            //4번도 함께 추천이되니, 4번을 제외하게해준다.
+            [models.Sequelize.Op.ne]: id,
+          },
+        },
+      }).then((products) => {
+        res.send({
+          products,
+        });
+      });
+    })
+    .catch((error) => {
+      console.error(error);
+      res.status(500).send("에러가 발생했습니다..");
+    });
+});
+
+app.listen(port, () => {
+  console.log("서버가 구동중입니다.");
+  models.sequelize
+    .sync()
+    .then(() => {
+      console.log("DB연결 성공");
+    })
+    .catch((err) => {
+      console.log("error :", err);
+      console.log("DB연결 에러");
+      process.exit();
     });
 });
