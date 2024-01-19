@@ -137,7 +137,7 @@ app.delete("/products/:id", (req, res) => {
 
 app.get("/banners", (req, res) => {
   models.Banner.findAll({
-    limit: 2,
+    limit: 3,
   })
     .then((result) => {
       res.send({
